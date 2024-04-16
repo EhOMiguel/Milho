@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAsync
 
 
-public class MilhoApplication {
+public class MilhoApplication {//teste
 
     public static void main(String[] args) {
         SpringApplication.run(MilhoApplication.class, args);
