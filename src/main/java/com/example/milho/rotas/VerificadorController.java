@@ -25,24 +25,28 @@ public class VerificadorController {
     public String verificarArquivo(@RequestParam("arquivoAssinado") MultipartFile arquivoAssinado,
                                    @RequestParam("arquivoJson") MultipartFile arquivoJson) throws StreamReadException, DatabindException, IOException {
 
+        System.out.println("Tipo de conteúdo recebido 2: " + arquivoJson.getContentType());
+        System.out.println("Tipo de conteúdo recebido 1: " + arquivoAssinado.getContentType());
+
         if (arquivoAssinado == null || !"application/pdf".equals(arquivoAssinado.getContentType())) {
+            System.out.println("Tipo de conteúdo recebido 1: " + arquivoAssinado.getContentType());
             return "Arquivo PDF inválido.";
         }
         if (arquivoJson == null || !"application/json".equals(arquivoJson.getContentType())) {
+            System.out.println("Tipo de conteúdo recebido 2: " + arquivoJson.getContentType());
             return "Arquivo JSON inválido.";
         }
 
         ObjectMapper mapper = new ObjectMapper();
-            // Deserializa o JSON para um Map
         Map<String, Object> dados = mapper.readValue(arquivoJson.getInputStream(), new TypeReference<Map<String, Object>>() {});
 
-
-
-            // Acesso aos dados deserializados
         String token = (String) dados.get("token");
-        BigInteger assinatura = (BigInteger) dados.get("assinatura");
-
+        // Corrigir a chave de assinatura conforme o JSON fornecido
+        String assStr = (String) dados.get("ass");
         
+
+        BigInteger assinatura = new BigInteger(assStr, 16); // Converte a string hexadecimal para BigInteger
+        System.out.println("assinatura convertida: "+assinatura);
 
         CalculoHash calculoHash = new CalculoHash();
         BigInteger hashArquivo = calculoHash.calcular(arquivoAssinado);
@@ -56,10 +60,10 @@ public class VerificadorController {
         Descriptografia descriptografia = new Descriptografia();
         BigInteger hashAssinatura = descriptografia.descriptografar(assinatura, e, n);
 
-        if(descriptografia.comparar(hashAssinatura, hashArquivo)){
+        System.out.println(descriptografia.comparar(hashArquivo, hashAssinatura));
+        if (descriptografia.comparar(hashArquivo, hashAssinatura) == true) {
             return "Integridade verificada :)";
         }
-
 
         return "Integridade corrompida :(";
     }
