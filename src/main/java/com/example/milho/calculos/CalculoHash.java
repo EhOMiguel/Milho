@@ -1,30 +1,49 @@
 package com.example.milho.calculos;
 
 import org.springframework.web.multipart.MultipartFile;
+
+import com.itextpdf.kernel.pdf.PdfArray;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.signatures.SignatureUtil;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class CalculoHash {
-    public BigInteger calcular(MultipartFile arquivo) {
+    public BigInteger calcular(byte[] arquivo_ass) {
         try {
-            // Obtem o conteúdo do arquivo
-            byte[] arquivoBytes = arquivo.getBytes();
+            PdfReader reader = new PdfReader(new ByteArrayInputStream(arquivo_ass));
+        PdfDocument pdfDoc = new PdfDocument(reader);
 
-            // Concatena o token com o conteúdo do arquivo (tirei o token)
-            byte[] dataToHash = new byte[arquivoBytes.length];
-            System.arraycopy(arquivoBytes, 0, dataToHash, 0, arquivoBytes.length);
-            // System.arraycopy(token.getBytes(), 0, dataToHash, arquivoBytes.length, token.getBytes().length);
+        SignatureUtil signUtil = new SignatureUtil(pdfDoc);
+        String signatureName = signUtil.getSignatureNames().get(0);
+        PdfArray byteRange = signUtil.getSignature(signatureName).getByteRange();
 
-            // Calcula a hash SHA-256 do conteúdo do arquivo
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(dataToHash);
+        System.out.println("ByteRange: " + byteRange);
 
-            // Converte a hash em formato hexadecimal para decimal
-            BigInteger hashDecimal = new BigInteger(1, hash);
+        byte[] fileContent = arquivo_ass;
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
-            System.out.println("HASH DO ARTHUR" + hashDecimal);
+        // Lendo os intervalos especificados pelo ByteRange
+        long start1 = byteRange.getAsNumber(0).longValue();
+        long end1 = start1 + byteRange.getAsNumber(1).longValue();
+        long start2 = byteRange.getAsNumber(2).longValue();
+        long end2 = start2 + byteRange.getAsNumber(3).longValue();
+
+        // Primeira parte
+        digest.update(fileContent, (int) start1, (int) (end1 - start1));
+        // Segunda parte
+        digest.update(fileContent, (int) start2, (int) (end2 - start2));
+
+        byte[] documentHash = digest.digest();
+        BigInteger hashDecimal = new BigInteger(1, documentHash);
+        System.out.println("HASH ASSINADA: " + hashDecimal);
+
+        reader.close();
 
             // Converte para string para extrair os primeiros 5 dígitos
             String hashString = hashDecimal.toString();
